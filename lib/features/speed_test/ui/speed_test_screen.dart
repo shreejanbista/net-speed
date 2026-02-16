@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/speed_test_provider.dart';
 import 'widgets/speed_gauge.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SpeedTestScreen extends ConsumerWidget {
   const SpeedTestScreen({super.key});
@@ -148,7 +149,7 @@ class _ResultItem extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
+          style: GoogleFonts.spaceMono(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,

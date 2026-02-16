@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class SpeedGauge extends StatelessWidget {
@@ -32,8 +33,7 @@ class SpeedGauge extends StatelessWidget {
             children: [
               Text(
                 (value * maxSpeed).toStringAsFixed(1),
-                style: const TextStyle(
-                  fontFamily: 'SpaceMono', // Assuming font family, or just standard bold
+                style: GoogleFonts.spaceMono(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,

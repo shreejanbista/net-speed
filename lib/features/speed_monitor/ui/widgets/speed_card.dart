@@ -48,20 +48,13 @@ class SpeedCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: bytesPerSec.toDouble()),
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Text(
-                    SpeedFormatter.formatSpeedValue(value.toInt()),
+                  Text(
+                    SpeedFormatter.formatSpeedValue(bytesPerSec),
                     style: theme.textTheme.displayLarge?.copyWith(
                       color: AppColors.textPrimary,
                       height: 1.0,
                     ),
-                  );
-                },
-              ),
+                  ),
               const SizedBox(width: 8),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

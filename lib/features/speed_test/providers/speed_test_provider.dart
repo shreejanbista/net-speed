@@ -63,9 +63,9 @@ class SpeedTestNotifier extends StateNotifier<SpeedTestState> {
       int startTime = DateTime.now().millisecondsSinceEpoch;
       int lastTickTime = startTime;
 
-      // Update speed every 200ms
+      // Update speed every 50ms (Faster updates)
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
         final now = DateTime.now().millisecondsSinceEpoch;
         final elapsed = now - lastTickTime;
         if (elapsed > 0) {
@@ -75,7 +75,7 @@ class SpeedTestNotifier extends StateNotifier<SpeedTestState> {
           
           state = state.copyWith(
             downloadSpeed: speedMbps,
-            progress: totalBytes / (50 * 1024 * 1024), // Approx 50MB
+            progress: totalBytes / (25 * 1024 * 1024), // Limit 25MB
           );
 
           bytesSinceLastTick = 0;
@@ -91,6 +91,12 @@ class SpeedTestNotifier extends StateNotifier<SpeedTestState> {
         }
         totalBytes += chunk.length;
         bytesSinceLastTick += chunk.length;
+
+        // Stop at 25MB
+        if (totalBytes >= 25 * 1024 * 1024) {
+           _currentRequest?.abort();
+           break;
+        }
       }
 
       _timer?.cancel();
