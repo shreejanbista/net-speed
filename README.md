@@ -2,6 +2,8 @@
 
 NetSpeed is a lightweight, accurate internet speed monitor and data usage tracker for Android, built with Flutter.
 
+Shows download and upload speed of currently conneted internet be it wifi or mobile data. Also users can opt to show the download speed on their status bar that stays there.
+
 ## Features
 - **Real-Time Monitoring**: Shows download/upload speeds in the status bar (via foreground service).
 - **Data Usage**: Tracks daily, weekly, and monthly data consumption (WiFi & Mobile).
