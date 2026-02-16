@@ -171,6 +171,12 @@ class MainActivity : FlutterActivity() {
                         val usage = usageHelper.getDailyUsage(networkType, days)
                         result.success(usage)
                     }
+                    "getAppUsage" -> {
+                        val networkType = call.argument<Int>("networkType") ?: -1
+                        val timeRange = call.argument<String>("timeRange") ?: "today"
+                        val usage = usageHelper.getAppUsage(networkType, timeRange)
+                        result.success(usage)
+                    }
                     else -> result.notImplemented()
                 }
             }

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 
 /// Data usage reading from NetworkStatsManager
@@ -125,4 +126,53 @@ class UsageChannel {
         .map((e) => DailyUsage.fromMap(e as Map<dynamic, dynamic>))
         .toList();
   }
+
+  /// Get per-app usage breakdown.
+  static Future<List<AppUsage>> getAppUsage({
+    int networkType = -1,
+    String timeRange = 'today',
+  }) async {
+    final result = await _channel.invokeMethod<List<dynamic>>(
+      'getAppUsage',
+      {'networkType': networkType, 'timeRange': timeRange},
+    );
+    if (result == null) return [];
+    return result
+        .map((e) => AppUsage.fromMap(e as Map<dynamic, dynamic>))
+        .toList();
+  }
 }
+
+/// Per-app data usage (includes metadata from native PackageManager)
+class AppUsage {
+  final String packageName;
+  final String appName;
+  final Uint8List? icon;
+  final int uid;
+  final int downloadBytes;
+  final int uploadBytes;
+  final int totalBytes;
+
+  const AppUsage({
+    required this.packageName,
+    required this.appName,
+    this.icon,
+    required this.uid,
+    required this.downloadBytes,
+    required this.uploadBytes,
+    required this.totalBytes,
+  });
+
+  factory AppUsage.fromMap(Map<dynamic, dynamic> map) {
+    return AppUsage(
+      packageName: map['packageName'] as String? ?? 'unknown',
+      appName: map['appName'] as String? ?? map['packageName'] as String? ?? 'Unknown',
+      icon: map['icon'] as Uint8List?,
+      uid: (map['uid'] as num?)?.toInt() ?? 0,
+      downloadBytes: (map['downloadBytes'] as num?)?.toInt() ?? 0,
+      uploadBytes: (map['uploadBytes'] as num?)?.toInt() ?? 0,
+      totalBytes: (map['totalBytes'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+

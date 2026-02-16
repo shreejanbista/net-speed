@@ -43,7 +43,7 @@ class SpeedTestNotifier extends StateNotifier<SpeedTestState> {
 
   Timer? _timer;
   
-  // Test File URL (50MB from Tele2)
+  // Test File URL (50MB file from Tele2, but we cap download at 25MB)
   static const String _downloadUrl = 'http://speedtest.tele2.net/50MB.zip';
   
   final HttpClient _client = HttpClient();
@@ -63,9 +63,9 @@ class SpeedTestNotifier extends StateNotifier<SpeedTestState> {
       int startTime = DateTime.now().millisecondsSinceEpoch;
       int lastTickTime = startTime;
 
-      // Update speed every 50ms (Faster updates)
+      // Update speed every 500ms (readable pace for the number display)
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
         final now = DateTime.now().millisecondsSinceEpoch;
         final elapsed = now - lastTickTime;
         if (elapsed > 0) {

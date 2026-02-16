@@ -8,6 +8,7 @@ import '../providers/chart_providers.dart';
 import 'widgets/daily_chart.dart';
 import 'widgets/weekly_chart.dart';
 import 'widgets/monthly_chart.dart';
+import 'widgets/top_apps_list.dart';
 
 /// Analytics screen offering a unified view of charts and usage totals.
 /// Merges previous DataUsageScreen functionality here.
@@ -124,6 +125,7 @@ class _DailyTab extends ConsumerWidget {
           error: (_, __) => _chartError(context),
         ),
         const SizedBox(height: 24),
+        const TopAppsList(timeRange: 'today'),
       ],
     );
   }
@@ -149,6 +151,7 @@ class _WeeklyTab extends ConsumerWidget {
           error: (_, __) => _chartError(context),
         ),
         const SizedBox(height: 24),
+        const TopAppsList(timeRange: 'week'),
       ],
     );
   }
@@ -174,6 +177,7 @@ class _MonthlyTab extends ConsumerWidget {
           error: (_, __) => _chartError(context),
         ),
         const SizedBox(height: 24),
+        const TopAppsList(timeRange: 'month'),
       ],
     );
   }

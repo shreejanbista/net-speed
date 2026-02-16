@@ -3,14 +3,19 @@ package com.netspeed.net_speed
 import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
-import android.os.Build
 import android.telephony.TelephonyManager
+import java.io.ByteArrayOutputStream
 import java.util.Calendar
 
 /**
  * Queries NetworkStatsManager for data usage statistics.
- * 
+ *
  * Returns aggregated download/upload bytes for WiFi and Mobile
  * over configurable time ranges (today, week, month).
  */
@@ -34,19 +39,16 @@ class UsageStatsHelper(private val context: Context) {
 
         try {
             if (networkType == 1 || networkType == -1) {
-                // WiFi usage
                 val wifiStats = queryStats(ConnectivityManager.TYPE_WIFI, startTime, endTime)
                 totalRx += wifiStats.first
                 totalTx += wifiStats.second
             }
             if (networkType == 0 || networkType == -1) {
-                // Mobile usage
                 val mobileStats = queryStats(ConnectivityManager.TYPE_MOBILE, startTime, endTime)
                 totalRx += mobileStats.first
                 totalTx += mobileStats.second
             }
         } catch (e: SecurityException) {
-            // PACKAGE_USAGE_STATS not granted
             return mapOf(
                 "downloadBytes" to 0L,
                 "uploadBytes" to 0L,
@@ -72,7 +74,6 @@ class UsageStatsHelper(private val context: Context) {
 
     /**
      * Get hourly breakdown for a specific day (for daily chart).
-     * Returns list of 24 maps, one per hour.
      */
     fun getHourlyUsage(networkType: Int, dayOffset: Int): List<Map<String, Long>> {
         val result = mutableListOf<Map<String, Long>>()
@@ -101,9 +102,7 @@ class UsageStatsHelper(private val context: Context) {
                     rx += stats.first
                     tx += stats.second
                 }
-            } catch (_: Exception) {
-                // Skip on error
-            }
+            } catch (_: Exception) { }
 
             result.add(mapOf(
                 "hour" to hour.toLong(),
@@ -157,10 +156,117 @@ class UsageStatsHelper(private val context: Context) {
         return result
     }
 
+    /**
+     * Get per-app usage for a specific network type and time range.
+     * Returns list of maps with packageName, appName, icon (PNG bytes), usage data.
+     */
+    fun getAppUsage(networkType: Int, timeRange: String): List<Map<String, Any>> {
+        val (startTime, endTime) = getTimeRange(timeRange)
+        val usageMap = mutableMapOf<Int, AppUsageData>()
+
+        try {
+            if (networkType == 1 || networkType == -1) {
+                val wifiStats = networkStatsManager.querySummary(
+                    ConnectivityManager.TYPE_WIFI, null, startTime, endTime
+                )
+                aggregateStats(wifiStats, usageMap)
+                wifiStats.close()
+            }
+
+            if (networkType == 0 || networkType == -1) {
+                val subscriberId = getSubscriberId()
+                val mobileStats = networkStatsManager.querySummary(
+                    ConnectivityManager.TYPE_MOBILE, subscriberId, startTime, endTime
+                )
+                aggregateStats(mobileStats, usageMap)
+                mobileStats.close()
+            }
+        } catch (e: Exception) {
+            return emptyList()
+        }
+
+        val pm = context.packageManager
+        val result = mutableListOf<Map<String, Any>>()
+
+        usageMap.forEach { (uid, data) ->
+            val packages = pm.getPackagesForUid(uid)
+            if (packages != null && packages.isNotEmpty()) {
+                val packageName = packages[0]
+
+                // Resolve app name
+                val appName = try {
+                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                    pm.getApplicationLabel(appInfo).toString()
+                } catch (_: PackageManager.NameNotFoundException) {
+                    packageName
+                }
+
+                // Resolve app icon as PNG bytes
+                val iconBytes = try {
+                    val appInfo = pm.getApplicationInfo(packageName, 0)
+                    val drawable = pm.getApplicationIcon(appInfo)
+                    drawableToBytes(drawable)
+                } catch (_: Exception) {
+                    null
+                }
+
+                val entry = mutableMapOf<String, Any>(
+                    "packageName" to packageName,
+                    "appName" to appName,
+                    "uid" to uid,
+                    "downloadBytes" to data.rx,
+                    "uploadBytes" to data.tx,
+                    "totalBytes" to (data.rx + data.tx)
+                )
+                if (iconBytes != null) {
+                    entry["icon"] = iconBytes
+                }
+                result.add(entry)
+            }
+        }
+
+        result.sortByDescending { it["totalBytes"] as Long }
+        return result
+    }
+
+    // --- Private helpers ---
+
+    private fun drawableToBytes(drawable: Drawable): ByteArray? {
+        val bitmap = if (drawable is BitmapDrawable) {
+            drawable.bitmap
+        } else {
+            val w = drawable.intrinsicWidth.coerceAtLeast(1)
+            val h = drawable.intrinsicHeight.coerceAtLeast(1)
+            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bmp
+        }
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 80, stream)
+        return stream.toByteArray()
+    }
+
+    private fun aggregateStats(stats: NetworkStats, map: MutableMap<Int, AppUsageData>) {
+        val bucket = NetworkStats.Bucket()
+        while (stats.hasNextBucket()) {
+            stats.getNextBucket(bucket)
+            if (bucket.tag == NetworkStats.Bucket.TAG_NONE) {
+                val uid = bucket.uid
+                val current = map.getOrPut(uid) { AppUsageData() }
+                current.rx += bucket.rxBytes
+                current.tx += bucket.txBytes
+            }
+        }
+    }
+
+    private data class AppUsageData(var rx: Long = 0, var tx: Long = 0)
+
     private fun queryStats(type: Int, startTime: Long, endTime: Long): Pair<Long, Long> {
         var rx = 0L
         var tx = 0L
-        
+
         val subscriberId = if (type == ConnectivityManager.TYPE_MOBILE) {
             getSubscriberId()
         } else null
